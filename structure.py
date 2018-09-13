@@ -1,4 +1,5 @@
 import numpy as np
+import csv
 class Node:
 
     def __init__(self, genes, functions):
@@ -39,7 +40,6 @@ class Node:
     def splitNode(self,func):
         val =  {}
         nodes =  {}
-
         for gene in self.genes:
             temp = func(gene.geneCode)
             if temp in val :
@@ -54,19 +54,17 @@ class Node:
         if (self.terminal):
             return
         temp = self.functions.copy()
-        if (len(temp)==0):
-            print (len(temp))
         gis = [self.splitNode(func) for func in temp]
-        gi = max(gis,key=lambda item:item[1])
+        gi = min(gis,key=lambda item:item[1])
         #gi = max([self.splitNode(func)[1] for func in self.functions],key=lambda item:item[1])
         self.nodes = gi[0]
         self.giniIndex = gi[1]
+        self.func = temp[gis.index(gi)]
         temp.pop(gis.index(gi))
         for key in self.nodes:
             self.nodes[key].functions = temp
             self.nodes[key].checkTerminal()
-
-
+            self.nodes[key].calculateNodeLabel()
 
 
     def calculateLables(self):
@@ -82,6 +80,45 @@ class Node:
     def checkTerminal(self):
         if (len(self.functions) == 0):
             self.terminal = True
+        if (self.total==0):
+            self.termial = True
+        pure = any(map(lambda x:True if x==self.total else False,list(self.subTotal.values())))
+        if (pure):
+            self.terminal = True
+
+
+    def calculateNodeLabel(self):
+        self.nodeLabel = max(self.subTotal, key = self.subTotal.get)
+        
+
+
+    def getPrediction(self,location):
+        data = [['id','class']]
+        with open(location,'r') as csvFileObject:
+            csvReader = csv.reader(csvFileObject)
+            for line in csvReader:
+                data.append([line[0],self.predict(line[1])])
+        prediction = open('predict.csv','w')
+        with prediction:
+            writer = csv.writer(prediction)
+            writer.writerows(data)
+
+    def predict(self,geneCode):
+        node = self
+        while (not node.terminal):
+            if (node.func(geneCode) not in node.nodes):
+                break
+            node = node.nodes[node.func(geneCode)]
+        return node.nodeLabel
+
+
+
+
+
+
+
+
+
 
 
 
