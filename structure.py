@@ -1,5 +1,6 @@
 import numpy as np
 import csv
+import math
 class Node:
 
     def __init__(self, genes, functions):
@@ -19,23 +20,32 @@ class Node:
         self.nodes = {}
         self.index = 0
         self.giniIndex = 0
-        self.subTotal = {
-                      "EI":0,
-                      "IE":0,
-                      "N":0,
-        }
+        self.subTotal = {}
         self.total = len(genes)
         self.terminal = False
+        self.entropy = 0
+        self.iG = 0
+        self.calculateLables()
 
     def calculateGiniIndex(self, nodes):
         acc = 0
         for key in nodes:
             node = nodes[key]
-            node.calculateLables()
             node.calculateIndex()
             acc = acc + (node.index * node.total / self.total)
         return acc
 
+    def calculateEntropy(self):
+        temp = np.fromiter(self.subTotal.values(),dtype=float)/self.total
+        entropy = sum([(-1*x*math.log(x)) for x in temp])
+        self.entropy = entropy
+
+    def calculateIG(self,nodes):
+        for key in nodes:
+            node = nodes[key]
+            node.calculateEntropy()
+        acc = self.entropy - sum([node.entropy for node in nodes.values()])
+        return acc
 
     def splitNode(self,func):
         val =  {}
@@ -48,14 +58,16 @@ class Node:
                 val[temp]=[gene]
         for key in val:
             nodes[key]=Node(val[key],[])
-        return nodes,self.calculateGiniIndex(nodes)
+
+
+        return nodes,self.calculateIG(nodes)
 
     def split(self):
         if (self.terminal):
             return
         temp = self.functions.copy()
         gis = [self.splitNode(func) for func in temp]
-        gi = min(gis,key=lambda item:item[1])
+        gi = max(gis,key=lambda item:item[1])
         #gi = max([self.splitNode(func)[1] for func in self.functions],key=lambda item:item[1])
         self.nodes = gi[0]
         self.giniIndex = gi[1]
@@ -69,7 +81,11 @@ class Node:
 
     def calculateLables(self):
         for gene in self.genes:
-            self.subTotal[gene.label]+=1
+            if gene.label in self.subTotal:
+                self.subTotal[gene.label]+=1
+            else:
+                self.subTotal[gene.label]=1
+
 
 
     def calculateIndex(self):
@@ -89,7 +105,7 @@ class Node:
 
     def calculateNodeLabel(self):
         self.nodeLabel = max(self.subTotal, key = self.subTotal.get)
-        
+
 
 
     def getPrediction(self,location):
