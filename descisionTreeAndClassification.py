@@ -1,8 +1,8 @@
 import csv
 import pandas as panda
-
+import scipy.stats as sp
 import math
-from collections import Counter;
+from collections import Counter
 from pprint import pprint
 
 
@@ -97,7 +97,7 @@ def readCsvFile(location):
 
 
 
-    newtemp = ID3Algorithm(originalDataList, list(range(0,60)) , ["IE","EI","N"], "N" ,['A','G','C','T'])
+    newtemp = ID3Algorithm(originalDataList, list(range(0,60)) , ["IE","EI","N"], "N" ,['A','G','C','T','D','N','S','R'])
 
     query = originalDataList[11].geneCode
 
@@ -127,6 +127,10 @@ def readCsvFile(location):
 
 
 
+
+
+
+
 def predict(query,tree):
     for feature in list(range(0,60)):
         if feature in list(tree.keys()):
@@ -144,11 +148,9 @@ def predict(query,tree):
                 return temp
 
 def ID3Algorithm(dataList,features,labels, maxProbValue,targetList):
-    print("The original DataSet is : ")
-    print(dataList)
-    print (len(dataList))
-    boxes = Counter();
-    tempboxes =Counter();
+
+    boxes = Counter()
+    tempboxes =Counter()
     cnt = Counter();
     for label in labels:
         tempboxes[label] = [x for x in dataList if x.label == label]
@@ -157,9 +159,12 @@ def ID3Algorithm(dataList,features,labels, maxProbValue,targetList):
 
         if len(tempboxes[label]) != 0:
             boxes[label] = tempboxes[label]
-        print("the box label is  ::  " + label)
-        print(boxes[label])
-        #print(len(boxes[label]))
+
+
+
+
+
+
 
 
 
@@ -172,6 +177,7 @@ def ID3Algorithm(dataList,features,labels, maxProbValue,targetList):
 
         return list( boxes.keys())[0]
 
+    # if the data set or the feature vector is empty
     elif len(dataList) == 0 or len(features) == 0:
         return maxProbValue
 
@@ -188,17 +194,83 @@ def ID3Algorithm(dataList,features,labels, maxProbValue,targetList):
         newFeatures = [n for n in features if n != bestFeature]
 
         splitList = {}
+        childClasscount = Counter()
+
 
         for x in targetList:
-            splitList[x] = (x,[val for val in dataList if val.geneCode[bestFeature] == x])
+            valList = [val for val in dataList if val.geneCode[bestFeature] == x]
+            if len(valList) != 0 :
+                splitList[x] = (x,valList)
+
+            #print("the length is   :::   " + str(len(splitList)))
+
+        if len(splitList) == 0:
+            print("sdjlsadjgljadslgjl;sdkjglksdglkdlksdlg")
+
+        totalChi = 0;
+        for val in splitList:
+            target = splitList[val][0]
+            childData = splitList[val][1]
+            childCnt = Counter()
+            for label in labels:
+                childCnt[label] += 1
+            # chi = (actual -expected) ^ 2 / expected
+            totalData = len(childData)
+
+            childChi = 0;
+
+            for label in labels:
+
+                expected = len(childData) * cnt[label] / len (dataList)
+
+
+                if expected == 0 :
+                    tempChi = 0;
+                else:
+                    actual = childCnt[label]
+                    tempChi = (actual -expected) * (actual - expected) / (expected)
+
+                childChi = childChi + tempChi
+
+            totalChi = totalChi + childChi
+
+
+
+        print("the total chi is  ::  "  + str(totalChi) )
+
+
+
+        degreeOfFreedom =  2 * (len(splitList) -1 )
+        confidenceInterval = 0.90
+        threshold = sp.chi2.ppf(confidenceInterval, degreeOfFreedom)
+        print("THRESHOLD  :  "   + str(threshold))
+        if totalChi < threshold:
+
+            return max(cnt)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
         for newDataList in splitList:
 
-            print("new Data List haruuu ")
-            print(splitList[newDataList][1])
-            print (len(splitList[newDataList][1]))
+
 
             newTree = ID3Algorithm(splitList[newDataList][1],newFeatures,labels,bestDefaultLabel,targetList)
 
@@ -206,6 +278,9 @@ def ID3Algorithm(dataList,features,labels, maxProbValue,targetList):
 
             tree[bestFeature][splitList[newDataList][0]] = newTree
     return tree
+
+
+
 
 
 
